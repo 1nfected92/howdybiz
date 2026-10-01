@@ -20,6 +20,8 @@
 - Browser caching retained an older unversioned script after deployment. Builds now place all frontend modules and styles in a content-hashed asset directory; relative imports and the 404 fallback were verified against the built files.
 - Owner session deployment passed in 38 seconds: https://github.com/1nfected92/howdybiz/actions/runs/36938343084.
 - Sign-in synchronization source deployment passed: https://github.com/1nfected92/howdybiz/actions/runs/36939557203 (build 24 seconds, deploy 12 seconds).
+- Cache-safe Pages deployment succeeded: https://github.com/1nfected92/howdybiz/actions/runs/36939727263 (build 31 seconds, deploy 8 seconds). The published HTML references content-versioned frontend assets.
+- Published search now opens the owner sign-in dialog; closing it preserves the entered keyword and ZIP. Screenshot: `docs/sign-in-working.jpg`. This screenshot verifies the sign-in entry point, not a completed browser login.
 - **Not yet observed:** a real Gmail Send acceptance or mailbox receipt. No unreviewed email was sent. Do not describe the unsent draft as a send test.
 
 ## Earlier source/UI checks
