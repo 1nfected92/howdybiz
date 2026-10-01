@@ -1,6 +1,6 @@
 # HowdyBiz verification — 2026-10-01
 
-**Result: frontend and backend source completed; GitHub repository created. Hosted backend and live provider integrations remain blocked.**
+**Result: source published and frontend deployed on GitHub Pages. Hosted backend and live provider integrations remain blocked.**
 
 ## Executed successfully
 
@@ -33,11 +33,23 @@ Screenshots in the source package:
 
 The sample payments and businesses shown in screenshots are fictional, created during UI checks. They are not production results.
 
+## Published-site verification
+
+- Repository: https://github.com/1nfected92/howdybiz
+- App: https://1nfected92.github.io/howdybiz/
+- Successful CI/build/Pages deployment: https://github.com/1nfected92/howdybiz/actions/runs/36830700979 (36 seconds).
+- `npm test` repeated after source restoration: **24 passed, 0 failed**; build succeeded.
+- Published dashboard defaults to Demo ON, loads six complete-contact fictional records, and keeps the seventh incomplete sample in the enrichment queue.
+- Saved a demo note and stage, saved an email draft, reloaded the deployed app, and verified note, stage and chronological history persisted in the session.
+- Preparing and saving a draft did not send mail. Reviewing a send while unconfigured was blocked. Switching to Live without backend/sign-in was blocked and Demo stayed ON.
+- Screenshot: `docs/dashboard.jpg` (fictional samples only).
+- The workflow reported upstream GitHub Actions Node 20 deprecation warnings; build and deploy succeeded. Hosted integration checks below remain outstanding.
+
 ## External blockers
 
 | Dependency | Observed state | Required next step |
 |---|---|---|
-| GitHub repository and Pages | Public `1nfected92/howdybiz` repository created using the authorized browser session. | Publish source through the connector and verify GitHub Pages workflow and public URL. |
+| GitHub repository and Pages | Public `1nfected92/howdybiz` source published. GitHub Pages build and deployment succeeded. Published dashboard opened at `/howdybiz/`. | Completed; public backend configuration can be added after provisioning. |
 | Dedicated Supabase project | New project request failed: account already has the two active free projects `football-squares` and `the-soleful-goddess`. | Resolve project capacity through an authorized plan change or an explicitly selected project pause. Neither existing project was modified. |
 | Google discovery and photos | No Google Places/Geocoding API credentials supplied. | Configure Google Cloud APIs, billing/quota limits and backend API key. |
 | Gmail runtime connection | Conversation Gmail profile verified; its credentials are not transferable to the application. No web OAuth client credentials supplied. | Configure Google web OAuth and explicitly connect Gmail in the app. |
@@ -46,7 +58,6 @@ The initial new-project cost quote was **$0/month**, but creation did not succee
 
 ## Not verified in this environment
 
-- Actual GitHub Pages publication, Actions run and public URL.
 - Hosted Supabase migration, Auth email-link delivery, security advisors and runtime function deployment.
 - Live Google search, contact-enrichment coverage, Geocoding and Google photo availability.
 - Real Google OAuth consent, token refresh, Gmail acceptance and mailbox receipt.

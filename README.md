@@ -6,7 +6,7 @@ Business discovery and outreach CRM with a static GitHub Pages frontend and a Su
 
 - Frontend, demo workspace, database migration, authenticated API, Google discovery adapter and Gmail OAuth/send implementation are included.
 - Supabase project creation was refused because the connected account already has its two active free projects. Neither existing project was modified.
-- The public GitHub repository has been created at https://github.com/1nfected92/howdybiz. The GitHub Pages deployment workflow is included; publication is being verified.
+- Source is published at https://github.com/1nfected92/howdybiz. The GitHub Pages deployment passed and https://1nfected92.github.io/howdybiz/ was opened and tested.
 - Google Cloud credentials were not provided. Live Google searches, photos and Gmail sends have not been executed or verified.
 - A full schema was applied to isolated PostgreSQL through PGlite, and the security/function tests passed. This does not substitute for deployment verification on hosted Supabase.
 
@@ -32,24 +32,25 @@ All frontend assets use relative paths. Navigation is in-app and works under `/h
 
 ## GitHub repository and Pages
 
-Once an authorized GitHub CLI or browser session is available, inspect the account for an existing `howdybiz` repository. Preserve its files if it exists. For a new free Pages deployment, create a public repository containing only source and configuration templates.
+The public repository and free GitHub Pages project site are deployed:
+
+- Repository: https://github.com/1nfected92/howdybiz
+- App: https://1nfected92.github.io/howdybiz/
+- Initial successful deployment: https://github.com/1nfected92/howdybiz/actions/runs/36830700979
+
+Open the app and click **Load sample workspace** to review the interface without configuring a backend. Samples are fictional. Live searches and sending remain blocked until backend setup and authorization are complete.
+
+To work locally:
 
 ```bash
-gh auth status
-gh repo view 1nfected92/howdybiz
+git clone https://github.com/1nfected92/howdybiz.git
+cd howdybiz
+npm ci
+npm test
+npm run dev
 ```
 
-If GitHub confirms it does not exist, initialize and publish this source:
-
-```bash
-git init -b main
-git add .
-git commit -m "Build HowdyBiz business discovery and outreach CRM"
-gh repo create 1nfected92/howdybiz --public --source=. --remote=origin --push
-gh api --method POST repos/1nfected92/howdybiz/pages -f build_type=workflow
-```
-
-If the repository already exists, use an isolated checkout and review the difference instead of running the creation commands. GitHub's permissions may require choosing **Settings → Pages → Source → GitHub Actions** in the browser.
+Push changes to `main` to run the existing deployment workflow. Pages is configured to use **GitHub Actions** as its publishing source.
 
 The workflow runs `npm ci`, all unit and PostgreSQL tests, builds `dist`, uploads the Pages artifact, and deploys. Set these repository **Actions variables**, which contain public values only:
 
@@ -57,11 +58,6 @@ The workflow runs `npm ci`, all unit and PostgreSQL tests, builds `dist`, upload
 - `HOWDY_SUPABASE_PUBLISHABLE_KEY`: its publishable key, or legacy anon key.
 
 Alternatively, set those public values in `public/config.json`. Never place a service-role key there. Browser Integrations settings offer a local public-configuration override.
-
-Project URLs (Pages publication must be confirmed through the deployment workflow):
-
-- Repository: https://github.com/1nfected92/howdybiz
-- Pages: https://1nfected92.github.io/howdybiz/
 
 ## Dedicated Supabase backend
 
@@ -160,7 +156,7 @@ See `VERIFICATION.md` for executed checks and external blockers. Run the actual 
 6. Save a live note/proposal/payment, reload, and verify persistence.
 7. Confirm Google photo attribution and listing refresh on desktop/mobile.
 8. Inspect Supabase security advisors and RLS as a separate user.
-9. Verify the actual Pages deployment under `/howdybiz/` and its workflow status.
+9. Repeat the Pages smoke check after integration configuration; initial publication is verified.
 
 The optional `scripts/ui-check.mjs` uses Playwright. Supply `HOWDY_PLAYWRIGHT_MODULE` and `HOWDY_CHROMIUM_PATH` for installed tooling, or install Playwright in a separate development environment. It exercises the compiled site and the standalone preview without connecting external accounts. Screenshots are written to `test-results/` and are not deployed.
 
@@ -172,3 +168,9 @@ Reference documentation:
 - https://developers.google.com/maps/documentation/places/web-service/policies
 - https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send
 - https://developers.google.com/workspace/gmail/api/auth/web-server
+
+## Published dashboard
+
+This screenshot shows the deployed dashboard with fictional sample records.
+
+![Published HowdyBiz demo dashboard](docs/dashboard.jpg)
