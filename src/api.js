@@ -2,11 +2,13 @@ import { safeStorage } from './storage.js';
 const localStore=safeStorage('localStorage'),sessionStore=safeStorage('sessionStorage');
 let configuration = {}, session = null;
 let refreshFlight;
+function storedSession(){try{const saved=JSON.parse(localStore.getItem('howdybiz.auth')||sessionStore.getItem('howdybiz.auth')||'null');return saved&&typeof saved.access_token==='string'?saved:null;}catch{return null;}}
+export function syncSession(){const saved=storedSession();if(JSON.stringify(saved)===JSON.stringify(session))return false;session=saved;return true;}
 export async function initialize() {
   const stored = JSON.parse(localStore.getItem('howdybiz.connection') || '{}');
   const r = await fetch('./config.json').catch(() => null);
   configuration = { ...(r?.ok ? await r.json() : {}), ...stored };
-  session = JSON.parse(localStore.getItem('howdybiz.auth') || sessionStore.getItem('howdybiz.auth') || 'null');
+  session = storedSession();
   if(session){localStore.setItem('howdybiz.auth',JSON.stringify(session));sessionStore.removeItem('howdybiz.auth');}
   const hash = new URLSearchParams(location.hash.slice(1));
   if (hash.get('access_token')) {
