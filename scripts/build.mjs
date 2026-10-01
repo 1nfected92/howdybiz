@@ -1,0 +1,13 @@
+import { mkdir, cp, rm, readFile, writeFile } from 'node:fs/promises';
+await rm('dist', { recursive: true, force: true });
+await mkdir('dist', { recursive: true });
+await cp('src', 'dist/src', { recursive: true });
+await cp('public', 'dist', { recursive: true });
+await cp('index.html', 'dist/index.html');
+await cp('index.html', 'dist/404.html');
+await writeFile('dist/.nojekyll', '');
+const config = JSON.parse(await readFile('public/config.json', 'utf8'));
+config.supabaseUrl = process.env.HOWDY_SUPABASE_URL || config.supabaseUrl;
+config.publishableKey = process.env.HOWDY_SUPABASE_PUBLISHABLE_KEY || config.publishableKey;
+await writeFile('dist/config.json', JSON.stringify(config, null, 2));
+console.log('Built GitHub Pages frontend in dist/');

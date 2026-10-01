@@ -1,0 +1,6 @@
+project_id = "howdybiz"
+[functions.api]
+verify_jwt = false
+entrypoint = "./functions/api/index.js"
+# OAuth callback is public. Every other action explicitly verifies getUser
+# through the Auth REST endpoint and enforces OWNER_EMAIL server-side.

@@ -1,0 +1,14 @@
+import {readFile,writeFile} from 'node:fs/promises';
+const strip=s=>s.replace(/^import .*;\s*$/gm,'').replace(/\bexport (?=(?:async )?(?:function|const|let))/g,'');
+const storage=strip(await readFile('src/storage.js','utf8'));
+const domain=strip(await readFile('src/domain.js','utf8'));
+const fixtures=strip(await readFile('src/fixtures.js','utf8'));
+const api=strip(await readFile('src/api.js','utf8'));
+const app=strip(await readFile('src/app.js','utf8'));
+const apiNames=['initialize','configured','getConfig','saveConnection','authenticate','logout','user','api'];
+const source=`${storage}\n${domain}\nconst e=escapeHtml;\n${fixtures}\nconst remote=(()=>{${api}\nreturn {${apiNames.join(',')}};})();\n${app}\nif(!state.records.length){state.records=samples();storeDemo();render();}`;
+const css=await readFile('src/styles.css','utf8');
+const html=await readFile('index.html','utf8');
+const result=html.replace('<link rel="icon" href="./favicon.svg" type="image/svg+xml">','').replace('<link rel="stylesheet" href="./src/styles.css">',()=>`<style>${css}</style>`).replace('<script type="module" src="./src/app.js"></script>',()=>`<script type="module">${source.replaceAll('</script','<\\/script')}</script>`);
+await writeFile('HowdyBiz-Preview.html',result);
+console.log('Created self-contained HowdyBiz-Preview.html');

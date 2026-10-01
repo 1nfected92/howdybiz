@@ -1,2 +1,174 @@
-# howdybiz
-Local business discovery, website opportunity analysis, proposals and outreach CRM.
+# HowdyBiz
+
+Business discovery and outreach CRM with a static GitHub Pages frontend and a Supabase backend. The first visit starts in Demo Mode. The deployable frontend has no production npm dependencies.
+
+## Current delivery status
+
+- Frontend, demo workspace, database migration, authenticated API, Google discovery adapter and Gmail OAuth/send implementation are included.
+- Supabase project creation was refused because the connected account already has its two active free projects. Neither existing project was modified.
+- The public GitHub repository has been created at https://github.com/1nfected92/howdybiz. The GitHub Pages deployment workflow is included; publication is being verified.
+- Google Cloud credentials were not provided. Live Google searches, photos and Gmail sends have not been executed or verified.
+- A full schema was applied to isolated PostgreSQL through PGlite, and the security/function tests passed. This does not substitute for deployment verification on hosted Supabase.
+
+## Local review
+
+```bash
+npm ci
+npm test
+npm run dev
+```
+
+Open http://localhost:4173/howdybiz/ and click **Load sample workspace**. The seven fictional records use reserved `.invalid` emails; six have both contacts and one goes to the enrichment queue. None are real Google results. Sample illustrations are not Google photos.
+
+`HowdyBiz-Preview.html` is a self-contained interface preview. Open it in a browser to test notes, pipeline changes, drafts, quotes, manual payments, filters, themes and demo clearing. It begins with fictional samples. Backend features remain disabled until configured and authorized.
+
+```bash
+npm run build
+npm run preview
+npm run portable
+```
+
+All frontend assets use relative paths. Navigation is in-app and works under `/howdybiz/`. The build also writes a Pages 404 fallback.
+
+## GitHub repository and Pages
+
+Once an authorized GitHub CLI or browser session is available, inspect the account for an existing `howdybiz` repository. Preserve its files if it exists. For a new free Pages deployment, create a public repository containing only source and configuration templates.
+
+```bash
+gh auth status
+gh repo view 1nfected92/howdybiz
+```
+
+If GitHub confirms it does not exist, initialize and publish this source:
+
+```bash
+git init -b main
+git add .
+git commit -m "Build HowdyBiz business discovery and outreach CRM"
+gh repo create 1nfected92/howdybiz --public --source=. --remote=origin --push
+gh api --method POST repos/1nfected92/howdybiz/pages -f build_type=workflow
+```
+
+If the repository already exists, use an isolated checkout and review the difference instead of running the creation commands. GitHub's permissions may require choosing **Settings → Pages → Source → GitHub Actions** in the browser.
+
+The workflow runs `npm ci`, all unit and PostgreSQL tests, builds `dist`, uploads the Pages artifact, and deploys. Set these repository **Actions variables**, which contain public values only:
+
+- `HOWDY_SUPABASE_URL`: new HowdyBiz project API URL.
+- `HOWDY_SUPABASE_PUBLISHABLE_KEY`: its publishable key, or legacy anon key.
+
+Alternatively, set those public values in `public/config.json`. Never place a service-role key there. Browser Integrations settings offer a local public-configuration override.
+
+Project URLs (Pages publication must be confirmed through the deployment workflow):
+
+- Repository: https://github.com/1nfected92/howdybiz
+- Pages: https://1nfected92.github.io/howdybiz/
+
+## Dedicated Supabase backend
+
+Provision a dedicated `howdybiz` project after resolving the account's free-project limit. Do not pause, delete, or reuse the two existing applications without explicit authorization. The initial quote was $0/month, but project creation failed; recheck plan and limits before provisioning.
+
+The CLI-generated migration in `supabase/migrations/` contains the canonical `supabase/schema.sql`. For a fresh project:
+
+```bash
+supabase login
+supabase link
+supabase db push
+supabase functions deploy api --no-verify-jwt
+```
+
+`supabase link` prompts for the intended project. Inspect the selected ref before pushing. This bootstrap must run only on a fresh HowdyBiz project; its `CREATE TABLE` operations are intentionally not destructive replacements.
+
+Auth setup:
+
+1. Set the Supabase Auth Site URL to the deployed HowdyBiz URL.
+2. Add that exact URL to the redirect allowlist. Add the localhost review URL separately if needed.
+3. Enable email sign-in links. Configure SMTP for dependable production authentication delivery; the default provider has restrictive limits.
+4. Set `OWNER_EMAIL` to the owner's verified Gmail address. Only that confirmed Auth user passes the API's authorization check.
+5. Enable the Data API for `public`. The migration explicitly grants authenticated SELECT access and enables ownership RLS. Anonymous users have no CRM table access, and ordinary authenticated users cannot write or call privileged RPCs.
+6. Sign in through the app. Creating an Auth account alone grants no access to the owner's records.
+
+Hosted functions supply Supabase URL, anon key and service-role key as built-in server environment variables. Configure the additional secrets from a private `.env` file copied from `.env.example`:
+
+```bash
+supabase secrets set --env-file .env
+```
+
+Generate `GMAIL_TOKEN_KEY` once and keep it stable. Rotating it requires reconnecting Gmail:
+
+```bash
+node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64'))"
+```
+
+The OAuth callback is public, so gateway `verify_jwt` is false. Every POST action explicitly verifies the Auth JWT via `/auth/v1/user`, confirmed email, the owner allowlist, and browser origin. OAuth callbacks use expiring, single-use server-side state and verify that the authorized Google account matches the workspace owner. Database RPCs are `SECURITY INVOKER`, have an empty search path, and are executable only by `service_role`.
+
+## Google Cloud discovery
+
+Create a Google Cloud project and enable **Places API (New)**. Enable **Geocoding API** if radius searches are used. Add an API-restricted key as `GOOGLE_PLACES_KEY` in backend secrets. A Maps billing account may be required; searches and photos can incur provider charges, including in Demo Mode. Set quotas and budgets before enabling live searches.
+
+Discovery uses Text Search, explicit field masks, pagination, up to five zones per request, and four concurrent contact checks. For multiple cities/neighborhoods, separate zones with semicolons; comma-separated five-digit ZIP codes are accepted. Radius searches use a geocoded center and a distance filter. Google coverage and page limits mean searches are not exhaustive.
+
+Google data does not provide business emails through this adapter. Emails are extracted from public website HTML and a same-origin contact/about page. No email guessing, CAPTCHA bypass, or Google HTML scraping is implemented. Sites that block automation or rely on JavaScript may require manual contact enrichment. A listed email is not a deliverability guarantee.
+
+Google Maps listing names, addresses, categories, ratings, review counts and photos are transient. The backend stores place IDs, independently sourced contact facts, and user-authored CRM data. Production names use a public website's title/site name where available; otherwise a place-ID label is used. Independently sourced phone and email are required for a durable qualified lead. The dashboard can fetch a current Google listing on demand from a saved place ID using **Google details** for the current page or **Refresh Google listing** in its detail panel. Exports omit transient Google content, including phone numbers found only in Google listings.
+
+Google photographs are fetched on demand, with Google Maps and author attribution. Confirm applicable Google Maps terms before extending storage, caching, bulk exporting, or data reuse. No storage rights are assumed.
+
+## Gmail runtime authorization
+
+The Gmail connector in this conversation cannot export its authorization to the deployed app. Configure a separate web OAuth client in Google Cloud and enable Gmail API.
+
+1. Configure an OAuth consent screen and add the owner as a test user if the app remains in testing.
+2. Add the exact callback `https://YOUR_PROJECT_REF.supabase.co/functions/v1/api` as an authorized redirect URI.
+3. Store `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only in Edge Function secrets.
+4. Set `APP_URL` to the final Pages URL, including `/howdybiz/`, and set `OWNER_EMAIL` and the encryption key.
+5. Sign in to HowdyBiz, open Integrations, click **Connect my Gmail**, and complete Google consent.
+
+Scopes: `openid`, `email`, and `https://www.googleapis.com/auth/gmail.send`. The backend encrypts refresh tokens with AES-GCM, stores them in a private schema, and obtains access tokens server-side. OAuth testing status may affect refresh-token lifetime. Wider distribution may require Google verification. The Gmail connection can be revoked from Integrations.
+
+Send-only authorization does not support reading replies, Gmail draft synchronization or open tracking. Drafts are stored in the CRM. Follow-ups and Do Not Contact updates are manual. A Gmail accepted message ID is recorded; delivery and opens are never claimed.
+
+## Demo and send safeguards
+
+- New workspaces start in Demo Mode. The toggle is at the upper right; switching to Live requires confirmation.
+- Demo businesses, notes, quotes, manual payments and saved searches live in session storage. Server previews use separate demo rows that expire from workspace visibility after 24 hours.
+- Live data is never loaded into the demo result list or metrics. Explicit import is available only for non-sample discoveries and preserves existing production CRM history.
+- Email previews are frozen server-side for five minutes. The server reads authoritative mode/revision and saved contacts; it does not trust client recipients or client mode flags.
+- In Demo Mode, To is the verified owner's Gmail, subject is exactly `TEST`, and no CC/BCC headers are generated. The body includes the intended business and original subject. Missing Gmail verification blocks sending.
+- The send button redeems a single-use ticket. PostgreSQL locks workspace mode, ticket and business, then rechecks mode, ownership, contact, Do Not Contact and demo routing. Repeated identical submissions are blocked.
+- Mode changes invalidate previews and cannot proceed during an active or unresolved send. Search writes/imports also check mode revision in a locked database operation.
+- A timeout after attempting Gmail submission is `unknown`. The app never automatically retries it. Check Gmail Sent and resolve the issue manually in Integrations before retrying or changing mode. Resolution is labeled as manual, not provider confirmation.
+- Clear Demo Data is blocked while a demo send is active/unknown. Expired server rows can be deleted by an administrator; visibility expiry does not automatically purge all stored bytes.
+- There is no timer-driven page refresh. User-entered text persists across theme changes; background photo requests update only their preview region.
+
+## CRM behavior
+
+Opportunity: Potential, Possible or Not Needed, with a reason. HTTP availability alone does not establish website quality or buying intent. Website analysis checks reachability and reports limited HTML evidence; it is not a full accessibility or security audit.
+
+Pipeline: New, Reviewing, Qualified, Email Drafted, Contacted, Proposal Sent, Follow-up, Negotiating, Accepted, In Progress, Completed, Not Interested, On Hold and Do Not Contact.
+
+Quotes are versioned with scope, deliverables, timeline, USD amount, status, due date, payment terms and related-document URLs. Saving or setting a quote to Sent does not email it. Payment records are manual accounting entries; the app does not charge cards or confirm processor transactions.
+
+## Verification and limitations
+
+See `VERIFICATION.md` for executed checks and external blockers. Run the actual hosted integration checks after deployment:
+
+1. Owner sign-in and outsider denial.
+2. Real Places search in Demo, result coverage report and contact enrichment.
+3. Review a TEST preview, explicitly send it, and confirm recipient/subject in Gmail Sent and the inbox.
+4. Tamper with frontend To/CC/BCC/mode fields and confirm backend routing still uses authoritative settings.
+5. Prepare a preview, switch modes, and confirm the old ticket is rejected.
+6. Save a live note/proposal/payment, reload, and verify persistence.
+7. Confirm Google photo attribution and listing refresh on desktop/mobile.
+8. Inspect Supabase security advisors and RLS as a separate user.
+9. Verify the actual Pages deployment under `/howdybiz/` and its workflow status.
+
+The optional `scripts/ui-check.mjs` uses Playwright. Supply `HOWDY_PLAYWRIGHT_MODULE` and `HOWDY_CHROMIUM_PATH` for installed tooling, or install Playwright in a separate development environment. It exercises the compiled site and the standalone preview without connecting external accounts. Screenshots are written to `test-results/` and are not deployed.
+
+Reference documentation:
+
+- https://supabase.com/docs/guides/functions/auth
+- https://supabase.com/docs/guides/database/postgres/row-level-security
+- https://developers.google.com/maps/documentation/places/web-service/text-search
+- https://developers.google.com/maps/documentation/places/web-service/policies
+- https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send
+- https://developers.google.com/workspace/gmail/api/auth/web-server

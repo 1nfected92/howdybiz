@@ -1,0 +1,21 @@
+{
+  "name": "howdybiz",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Business discovery and outreach CRM with isolated demo mode",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "migration": "node scripts/migration.mjs",
+    "preview": "HOWDY_SERVE_ROOT=dist node scripts/serve.mjs",
+    "portable": "node scripts/portable.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8"
+  }
+}
