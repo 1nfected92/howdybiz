@@ -17,7 +17,9 @@
 - Hosted connector checks also passed: explicit submission produced a queued ticket, injected BCC was rejected before transport, and all verification fixtures were rolled back. Anonymous worker RPC returned HTTP 401; unauthenticated workspace access remained blocked.
 - Scheduled execution successfully read the connected Gmail profile and checked the Supabase queue, with matching owner identity and zero pending jobs. The worker was found paused during the subsequent run-now request and resumed.
 - Owner session synchronization now updates already open tabs after email-link sign-in and cross-tab sign-out. Search opens the sign-in dialog rather than returning an authentication toast. Typed search criteria survive the sign-in transition.
+- Browser caching retained an older unversioned script after deployment. Builds now place all frontend modules and styles in a content-hashed asset directory; relative imports and the 404 fallback were verified against the built files.
 - Owner session deployment passed in 38 seconds: https://github.com/1nfected92/howdybiz/actions/runs/36938343084.
+- Sign-in synchronization source deployment passed: https://github.com/1nfected92/howdybiz/actions/runs/36939557203 (build 24 seconds, deploy 12 seconds).
 - **Not yet observed:** a real Gmail Send acceptance or mailbox receipt. No unreviewed email was sent. Do not describe the unsent draft as a send test.
 
 ## Earlier source/UI checks
