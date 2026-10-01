@@ -33,7 +33,7 @@ Screenshots in the source package:
 
 The sample payments and businesses shown in screenshots are fictional, created during UI checks. They are not production results.
 
-## Published-site verification
+## Initial published-site verification (before backend connection)
 
 - Repository: https://github.com/1nfected92/howdybiz
 - App: https://1nfected92.github.io/howdybiz/
@@ -45,6 +45,14 @@ The sample payments and businesses shown in screenshots are fictional, created d
 - Screenshot: `docs/dashboard.jpg` (fictional samples only).
 - The workflow reported upstream GitHub Actions Node 20 deprecation warnings; build and deploy succeeded. Hosted integration checks below remain outstanding.
 
+## Backend-connected Pages verification
+
+- Successful backend-connected build and deployment: https://github.com/1nfected92/howdybiz/actions/runs/36898932167 (39 seconds).
+- The published app opened at `https://1nfected92.github.io/howdybiz/`; Integrations displays the dedicated Supabase URL and public key, with sign-in still required.
+- The current app defaults to Demo ON with no live business records. Google is labeled Setup required, Gmail OAuth required, and GitHub Pages Published.
+- Screenshot: `docs/backend-connected.jpg` (public configuration only).
+- Latest source verification: **24 automated tests passed**, and the static build succeeded.
+
 ## Hosted Supabase verification
 
 - Initial migration applied successfully; all four public CRM tables and five private integration tables have RLS enabled.
@@ -53,7 +61,7 @@ The sample payments and businesses shown in screenshots are fictional, created d
 - `APP_URL`, `OWNER_EMAIL` and a generated 32-byte `GMAIL_TOKEN_KEY` were saved in encrypted function secrets. No secret values are committed.
 - Health endpoint: HTTP 200, `status: ok`, owner configured, Places and Gmail OAuth credentials absent.
 - Anonymous CRM SELECT and privileged mode RPC returned HTTP 401 with permission denied.
-- Unauthenticated workspace requests returned a sign-in-required error; untrusted browser origins are rejected.
+- Unauthenticated workspace requests returned a sign-in-required error. An invalid session was rejected; an untrusted origin returned HTTP 403. CORS preflight succeeded for the configured GitHub Pages origin.
 - Hosted SQL verified ordinary authenticated users cannot INSERT, call privileged mode RPCs or access the private schema.
 - A rolled-back transaction inserted isolated verification users/records and asserted that the owner sees its row and another user sees none. All fixtures were rolled back.
 - Security advisor returned only five informational private-table notices for RLS without policies. This is intentional: browser roles have no schema access; only the service role uses those tables. Reference: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
