@@ -1,8 +1,21 @@
 # HowdyBiz verification — 2026-10-01
 
-**Result: source published and frontend deployed on GitHub Pages. Dedicated Supabase backend is deployed and connected. Google provider credentials and owner sign-in verification remain outstanding.**
+**Result: connected-worker integration is deployed on Supabase. Public discovery ran successfully and Gmail draft access was verified. The default route requires no Google API keys or separate OAuth client. Actual email sending and future scheduled execution remain unverified.**
 
-## Executed successfully
+## Connector integration verification
+
+- **32 automated tests passed**, including eight new PostgreSQL queue/transport tests. Build succeeded.
+- Additive connector migration applied, API version 6 deployed, and enabled hourly automation created successfully.
+- Connected Gmail profile email matched the confirmed Supabase owner; one owner sign-in session exists. No tokens or sign-in codes were read.
+- Real demo discovery request progressed queued → running → completed. One complete-contact business was verified from its own contact page and stored in the isolated demo workspace. A blocked candidate was omitted. No exhaustive coverage, Google ratings, photos or radius coverage was claimed.
+- An actual Gmail `TEST` draft was created, addressed only to the connected owner. It remains unsent. No business or test email was sent.
+- Browser roles cannot call connector RPCs or access the private queue. Duplicate submissions are rejected. Tampered CC/BCC and changed Gmail identity are rejected before transport.
+- Mode switches cancel waiting jobs and previews. Running or unknown mail outcomes block switches. Demo clearing cancels searches and prevents late completion from repopulating the workspace.
+- Search refresh preserves notes, pipeline stage, quotes and payment history. Background updates defer table replacement while a field or modal is active; no full-screen polling renders occur.
+- Security advisor now reports seven intentional private-table RLS-without-policy INFO notices and one password-protection WARN. The application uses email-link authentication; compromised-password screening remains disabled in Supabase. Reference: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- **Not yet observed:** a real Gmail Send acceptance, mailbox receipt, or future execution of the hourly automation. Do not describe the unsent draft as a send test.
+
+## Earlier source/UI checks
 
 | Check | Evidence |
 |---|---|
@@ -67,7 +80,7 @@ The sample payments and businesses shown in screenshots are fictional, created d
 - Security advisor returned only five informational private-table notices for RLS without policies. This is intentional: browser roles have no schema access; only the service role uses those tables. Reference: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
 - Google Cloud displayed “Site Unavailable” on opening and on one reload. Google client/API key creation remains blocked in this browser.
 
-## External blockers
+## Optional direct API dependencies
 
 | Dependency | Observed state | Required next step |
 |---|---|---|
@@ -80,7 +93,7 @@ New-project quote: **$0/month**. Creation succeeded after the authorized footbal
 
 ## Not verified in this environment
 
-- Owner email-link delivery and signed-in app workflows, including live record persistence after reload.
+- Owner confirmation and an Auth session are now verified in the database. This browser has not completed an owner-authenticated dashboard session, and hosted live edits after reload remain unverified.
 - Live Google search, contact-enrichment coverage, Geocoding and Google photo availability.
 - Real Google OAuth consent, token refresh, Gmail acceptance and mailbox receipt.
 - Send performance under concurrent production traffic.

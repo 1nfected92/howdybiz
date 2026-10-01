@@ -4,11 +4,33 @@ Business discovery and outreach CRM with a static GitHub Pages frontend and a Su
 
 ## Current delivery status
 
-- Frontend, demo workspace, database migration, authenticated API, Google discovery adapter and Gmail OAuth/send implementation are included.
-- The dedicated `howdybiz` Supabase project `jmofyaleyhhylmxenqme` is active in Saravia, us-east-1. The owner authorized pausing `football-squares` to free capacity; it is now paused. The Soleful Goddess project was not modified.
-- Source is published at https://github.com/1nfected92/howdybiz. The GitHub Pages deployment passed and https://1nfected92.github.io/howdybiz/ was opened and tested.
-- Google Cloud credentials were not provided. Live Google searches, photos and Gmail sends have not been executed or verified.
-- The migration and Edge Function are deployed on hosted Supabase. Public frontend configuration, owner restriction, token encryption secret and Auth URLs are configured. Hosted anonymous access, privileged RPC denial and owner/outsider RLS checks passed. Owner email-link sign-in and real provider workflows still require verification.
+- Frontend and dedicated Supabase backend are deployed; production records are private and owner-scoped.
+- **Default integration: connected ChatGPT worker.** No Google Cloud API keys or Gmail OAuth client setup are required for this route.
+- Business searches and explicitly reviewed Send requests enter a secure queue in Supabase. An enabled ChatGPT automation checks **hourly**, using the owner's existing Gmail/Supabase connections and public web search. Requests can also be processed immediately by asking this conversation: **Process my pending HowdyBiz requests now.**
+- The owner's Supabase email confirmation and sign-in session were verified. Sign in in the dashboard with the configured owner email and follow the secure link when needed.
+- A real public-web verification search completed and stored one sourced demo lead. A real unsent Gmail draft was created; no outreach or test email was sent.
+- **32 automated tests passed.** Provider sending acceptance and a future scheduled execution have not yet been observed.
+- `football-squares` remains paused. No paid upgrade was performed.
+
+## Easiest workflow
+
+1. Open https://1nfected92.github.io/howdybiz/ and sign in with the workspace owner email.
+2. Leave Demo Mode ON while testing. Enter a keyword and ZIP/city and click Search.
+3. Open **Requests** for queued/running/completed/error status. Automatic processing is hourly; use the run-now instruction above when needed.
+4. Complete-contact leads appear in the dashboard; incomplete contacts stay in the enrichment queue. Inspect the cited public source and Analyze the website before outreach.
+5. Prepare an email, review the actual recipient/body/subject, and explicitly click **Send**. This approves the frozen message for the connected worker, rather than sending it immediately.
+6. Demo sends use only the verified connected Gmail address, exactly `TEST`, and no CC/BCC. Switching mode cancels waiting requests; an in-flight or unknown send blocks mode changes until resolved.
+7. Importing a demo lead into production remains explicit. Live Send uses the saved business contact, and the worker records Gmail acceptance only with a real provider message ID.
+
+**Coverage:** public web results are partial and independently sourced; they are not Google Places API results. Google ratings, Google photos, exhaustive listings and exact radius coverage are not included without evidence/configured providers. Unverified radius searches must report the limitation rather than silently widening the search.
+
+**Availability:** the worker needs the owner's ChatGPT automation plus connected Gmail and Supabase accounts to remain enabled. Revoking a connection or disabling the automation stops processing; the queue remains visible and waiting requests can be cancelled. The app cannot export or reuse ChatGPT Gmail credentials in its static frontend.
+
+### Worker maintenance
+
+`supabase/connector-queue.sql` is the additive connector schema, mirrored in the CLI-generated migration. It provides service-only claim/finish RPCs; browser roles cannot write jobs or impersonate a worker. Owner/Gmail identity configuration lives only in private backend records. Never commit that configuration or tokens.
+
+To pause processing, disable the **Process HowdyBiz requests** automation. To prevent new submissions as well, set `private.connector_config.enabled=false` through an authorized backend operation. Do not alter unrelated automations or Supabase projects.
 
 ## Local review
 
@@ -38,7 +60,7 @@ The public repository and free GitHub Pages project site are deployed:
 - App: https://1nfected92.github.io/howdybiz/
 - Initial successful deployment: https://github.com/1nfected92/howdybiz/actions/runs/36830700979
 
-Open the app and click **Load sample workspace** to review the interface without configuring a backend. Samples are fictional. Live searches and sending remain blocked until Google credentials and owner authorization are complete.
+Open the app and click **Load sample workspace** to review the interface without configuring a backend. Samples are fictional. Sign in for connected-worker searches and approved email requests. Google credentials are required only for the optional direct API route.
 
 To work locally:
 
@@ -74,7 +96,7 @@ The dedicated backend has been provisioned at **$0/month**:
 
 The owner authorized pausing `football-squares` to make room. Its database was not deleted. Resuming it while both HowdyBiz and The Soleful Goddess are active may require more project capacity. Do not resume, pause or upgrade projects without the owner's direction.
 
-Open HowdyBiz and **Sign in** with the configured owner's Gmail address, then follow the sign-in email. The current provider needs the remaining Google credentials described below. Do not reapply the bootstrap migration to this deployed database.
+Open HowdyBiz and **Sign in** with the configured owner's Gmail address, then follow the sign-in email. The connected-worker route is configured. The optional immediate API route needs the Google credentials described below. Do not reapply the bootstrap migration to this deployed database.
 
 The CLI-generated migration in `supabase/migrations/` contains the canonical `supabase/schema.sql`. For a fresh project:
 
@@ -122,7 +144,7 @@ Google Maps listing names, addresses, categories, ratings, review counts and pho
 
 Google photographs are fetched on demand, with Google Maps and author attribution. Confirm applicable Google Maps terms before extending storage, caching, bulk exporting, or data reuse. No storage rights are assumed.
 
-## Gmail runtime authorization
+## Optional immediate Gmail runtime authorization
 
 The Gmail connector in this conversation cannot export its authorization to the deployed app. Configure a separate web OAuth client in Google Cloud and enable Gmail API. Google Cloud returned “Site Unavailable” in this browser, including one reload; client creation could not be completed here.
 

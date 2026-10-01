@@ -46,7 +46,7 @@ async function callback(url){
   const profile=await googleIdentity(tokens.access_token);if(profile.email.toLowerCase()!==env('OWNER_EMAIL').toLowerCase())throw Error('Connect the workspace owner Gmail account.');
   const ur=await fetch(env('SUPABASE_URL')+'/auth/v1/admin/users/'+saved.user_id,{headers:adminHeaders()});const user=await ur.json();if(!ur.ok||user.email?.toLowerCase()!==profile.email.toLowerCase())throw Error('Google and workspace accounts must match.');
   if(!tokens.scope?.split(' ').includes('https://www.googleapis.com/auth/gmail.send'))throw Error('Gmail send authorization was not granted.');
-  await privateData('gmail','put',saved.user_id,{email:profile.email,refresh_token:await encryptedToken(tokens.refresh_token)});
+  await privateData('gmail','put',saved.user_id,{email:profile.email,refresh_token:await encryptedToken(tokens.refresh_token)});await rpc('howdy_connector_use_oauth',{p_user:saved.user_id});
   return Response.redirect(env('APP_URL')+'?gmail=connected',303);
 }
 async function websiteFetch(value){
@@ -121,11 +121,19 @@ Deno.serve(async req=>{
     const user=await auth(req);const raw=await req.text();if(raw.length>150000)return json({error:'Request too large'},413);const input=JSON.parse(raw),action=input.action;
     if(!(await rpc('howdy_rate',{p_user:user.id,p_action:action,p_limit:action==='search'?3:action==='send'?5:30})))return json({error:'Rate limit reached. Try again in a minute.'},429);
     const s=await settings(user.id);
-    if(action==='workspace'){const gmail=await privateData('gmail','get',user.id);return json({settings:s,records:await records(user.id),integrations:{places:Boolean(env('GOOGLE_PLACES_KEY')),gmail:Boolean(gmail?.verified),gmail_email:gmail?.email||null,send_issues:await privateData('ticket','issues',user.id)}});}
+    if(action==='workspace'){const gmail=await privateData('gmail','get',user.id),connector=await rpc('howdy_connector_state',{p_user:user.id});return json({settings:s,records:await records(user.id),integrations:{places:Boolean(env('GOOGLE_PLACES_KEY')),gmail:Boolean(gmail?.verified),gmail_email:gmail?.email||null,transport:gmail?.transport||'oauth',connector,owner_verified:true,jobs:await rpc('howdy_connector_jobs',{p_user:user.id}),send_issues:await privateData('ticket','issues',user.id)}});}
+    if(action==='jobs')return json({jobs:await rpc('howdy_connector_jobs',{p_user:user.id})});
+    if(action==='cancel_job')return json({cancelled:await rpc('howdy_connector_cancel',{p_user:user.id,p_job:input.id})});
     if(action==='mode')return json(await rpc('howdy_mode',{p_user:user.id,p_mode:input.mode,p_revision:input.revision}));
     if(action==='clear_demo'){await rpc('howdy_clear_demo',{p_user:user.id});return json({cleared:true});}
     if(action==='resolve_send'){const ticket=await privateData('ticket','resolve',user.id,{id:input.id,status:input.status,confirmation:input.confirmation});await addActivity(user.id,ticket.business_id,'Email outcome manually resolved','Owner checked Gmail Sent and marked '+input.status+'. This is a manual record.');return json({resolved:true});}
-    if(action==='search')return json(await discovery(user,input,s));
+    if(action==='search'){
+      if(env('GOOGLE_PLACES_KEY'))return json(await discovery(user,input,s));
+      const q=input.query||{};const query={keyword:cleanText(q.keyword||'',120).trim(),zones:cleanText(q.zones||'',250).trim(),radius:cleanText(String(q.radius||''),10)};
+      if(query.radius&&(!Number.isFinite(Number(query.radius))||Number(query.radius)<1||Number(query.radius)>50))throw Error('Use a radius from 1 to 50 miles.');
+      const job=await rpc('howdy_connector_search',{p_user:user.id,p_revision:input.revision,p_query:query});
+      return json({queued:true,job_id:job.id,message:'Public web search queued. Your connected ChatGPT worker checks hourly. Results and source links appear here when completed. Coverage is partial; Google ratings and photos require the optional Places API.'});
+    }
     if(action==='save_search'){if(s.mode!=='live')throw Error('Save demo searches in session storage.');return json(await db('saved_searches','POST',{user_id:user.id,query:input.query}));}
     if(action==='saved_searches')return json({searches:await db('saved_searches?user_id=eq.'+user.id+'&order=created_at.desc')});
     if(action==='update'){const row=await rpc('howdy_update',{p_user:user.id,p_id:input.id,p_revision:input.revision,p_changes:changes(input.changes),p_label:cleanText(input.label,120),p_detail:cleanText(input.detail||'',2000)});const result=(await records(user.id)).find(b=>b.id===row.id);return json({business:result});}
@@ -134,14 +142,17 @@ Deno.serve(async req=>{
     if(action==='photo'){const id=cleanText(input.place_id,200);if(!/^[A-Za-z0-9_-]+$/.test(id))throw Error('Invalid Google place ID.');const p=await placesCall('places/'+id,null,'photos');const photo=p.photos?.[0];if(!photo)return json({url:null,attributions:[]});const result=await placesCall(photo.name+'/media?maxWidthPx=600&skipHttpRedirect=true',null,null);return json({url:result.photoUri,attributions:photo.authorAttributions||[]});}
     if(action==='listing'){const id=cleanText(input.place_id,200);if(!/^[A-Za-z0-9_-]+$/.test(id))throw Error('Invalid Google place ID.');const p=await placesCall('places/'+id,null,'displayName,formattedAddress,rating,userRatingCount,googleMapsUri,primaryTypeDisplayName');return json({name:p.displayName?.text,address:p.formattedAddress,category:p.primaryTypeDisplayName?.text,rating:p.rating,review_count:p.userRatingCount,google_url:p.googleMapsUri});}
     if(action==='oauth_start'){if(!env('GOOGLE_CLIENT_ID')||!env('GOOGLE_CLIENT_SECRET')||!env('GMAIL_TOKEN_KEY'))throw Error('Configure Google OAuth credentials and token encryption first.');const token=crypto.randomUUID()+crypto.randomUUID();await privateData('oauth','put',user.id,{state:token});const u=new URL('https://accounts.google.com/o/oauth2/v2/auth');for(const [k,v]of Object.entries({client_id:env('GOOGLE_CLIENT_ID'),redirect_uri:env('SUPABASE_URL')+'/functions/v1/api',response_type:'code',scope:'openid email https://www.googleapis.com/auth/gmail.send',access_type:'offline',prompt:'consent',state:token,login_hint:user.email}))u.searchParams.set(k,v);return json({url:u.href});}
-    if(action==='oauth_disconnect'){const account=await privateData('gmail','get',user.id);if(account){const token=await encryptedToken(account.refresh_token,true);await fetch('https://oauth2.googleapis.com/revoke',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({token}),signal:AbortSignal.timeout(10000)});}await privateData('gmail','delete',user.id);return json({disconnected:true});}
+    if(action==='oauth_disconnect'){const account=await privateData('gmail','get',user.id);if(account?.transport==='connector')throw Error('This Gmail connection is managed by ChatGPT.');if(account){const token=await encryptedToken(account.refresh_token,true);await fetch('https://oauth2.googleapis.com/revoke',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({token}),signal:AbortSignal.timeout(10000)});}await privateData('gmail','delete',user.id);return json({disconnected:true});}
     if(action==='preview'){
       assertRevision(s,input.revision);const account=await privateData('gmail','get',user.id);let b,row;
       if(s.mode==='live'){row=(await db('businesses?id=eq.'+input.business.id+'&user_id=eq.'+user.id+'&mode=eq.live'))[0];if(!row)throw Error('Production business not found.');b={...row.data,mode:'live'};}
       else{row=await saveBusiness(user.id,input.business,'demo',s.revision);b={...row.data,mode:'demo'};}
-      const envelope=prepareEnvelope(s,account,b,input.draft,input.revision);const ticket=await privateData('ticket','put',user.id,{business_id:row.id,envelope,mode:s.mode,revision:s.revision});return json({...envelope,id:ticket.id,expires_at:ticket.expires_at});
+      if(account?.transport==='connector'&&!(await rpc('howdy_connector_state',{p_user:user.id}))?.enabled)throw Error('Connected worker is disabled.');
+      const envelope=prepareEnvelope(s,account,b,input.draft,input.revision);const ticket=await privateData('ticket','put',user.id,{business_id:row.id,envelope,mode:s.mode,revision:s.revision});return json({...envelope,id:ticket.id,expires_at:ticket.expires_at,transport:account?.transport||'oauth'});
     }
     if(action==='send'){
+      const connected=await privateData('gmail','get',user.id);
+      if(connected?.transport==='connector'){const job=await rpc('howdy_connector_submit',{p_user:user.id,p_ticket:input.ticket_id,p_revision:input.revision});return json({status:'queued',job_id:job.id});}
       const ticket=await rpc('howdy_claim_send',{p_user:user.id,p_ticket:input.ticket_id,p_revision:input.revision});const account=await privateData('gmail','get',user.id);let attempted=false;
       try{
         const access=await googleToken(account),identity=await googleIdentity(access);if(identity.email.toLowerCase()!==account.email.toLowerCase())throw Error('Authorized Gmail identity changed. Reconnect.');
