@@ -1,6 +1,6 @@
 # HowdyBiz verification — 2026-10-01
 
-**Result: source published and frontend deployed on GitHub Pages. Hosted backend and live provider integrations remain blocked.**
+**Result: source published and frontend deployed on GitHub Pages. Dedicated Supabase backend is deployed and connected. Google provider credentials and owner sign-in verification remain outstanding.**
 
 ## Executed successfully
 
@@ -45,20 +45,34 @@ The sample payments and businesses shown in screenshots are fictional, created d
 - Screenshot: `docs/dashboard.jpg` (fictional samples only).
 - The workflow reported upstream GitHub Actions Node 20 deprecation warnings; build and deploy succeeded. Hosted integration checks below remain outstanding.
 
+## Hosted Supabase verification
+
+- Initial migration applied successfully; all four public CRM tables and five private integration tables have RLS enabled.
+- `api` function deployed and active. The OAuth callback and health endpoint are public; every CRM POST verifies the Auth user and configured owner.
+- Auth Site URL and exact redirect allowlist saved for the deployed `/howdybiz/` URL. Email authentication is enabled; automatic email confirmation is disabled.
+- `APP_URL`, `OWNER_EMAIL` and a generated 32-byte `GMAIL_TOKEN_KEY` were saved in encrypted function secrets. No secret values are committed.
+- Health endpoint: HTTP 200, `status: ok`, owner configured, Places and Gmail OAuth credentials absent.
+- Anonymous CRM SELECT and privileged mode RPC returned HTTP 401 with permission denied.
+- Unauthenticated workspace requests returned a sign-in-required error; untrusted browser origins are rejected.
+- Hosted SQL verified ordinary authenticated users cannot INSERT, call privileged mode RPCs or access the private schema.
+- A rolled-back transaction inserted isolated verification users/records and asserted that the owner sees its row and another user sees none. All fixtures were rolled back.
+- Security advisor returned only five informational private-table notices for RLS without policies. This is intentional: browser roles have no schema access; only the service role uses those tables. Reference: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
+- Google Cloud displayed “Site Unavailable” on opening and on one reload. Google client/API key creation remains blocked in this browser.
+
 ## External blockers
 
 | Dependency | Observed state | Required next step |
 |---|---|---|
-| GitHub repository and Pages | Public `1nfected92/howdybiz` source published. GitHub Pages build and deployment succeeded. Published dashboard opened at `/howdybiz/`. | Completed; public backend configuration can be added after provisioning. |
-| Dedicated Supabase project | New project request failed: account already has the two active free projects `football-squares` and `the-soleful-goddess`. | Resolve project capacity through an authorized plan change or an explicitly selected project pause. Neither existing project was modified. |
+| GitHub repository and Pages | Public `1nfected92/howdybiz` source published. GitHub Pages build and deployment succeeded. Published dashboard opened at `/howdybiz/`. | Completed; public backend configuration is included. |
+| Dedicated Supabase project | Owner authorized pausing `football-squares`; status is INACTIVE. Dedicated `howdybiz` project `jmofyaleyhhylmxenqme` is ACTIVE_HEALTHY. The Soleful Goddess was not modified. | Completed. No paid upgrade performed. |
 | Google discovery and photos | No Google Places/Geocoding API credentials supplied. | Configure Google Cloud APIs, billing/quota limits and backend API key. |
 | Gmail runtime connection | Conversation Gmail profile verified; its credentials are not transferable to the application. No web OAuth client credentials supplied. | Configure Google web OAuth and explicitly connect Gmail in the app. |
 
-The initial new-project cost quote was **$0/month**, but creation did not succeed. No Supabase upgrade or project pause was performed. No business or test email was sent.
+New-project quote: **$0/month**. Creation succeeded after the authorized football pause. No paid upgrade was performed. No business or Gmail test email was sent.
 
 ## Not verified in this environment
 
-- Hosted Supabase migration, Auth email-link delivery, security advisors and runtime function deployment.
+- Owner email-link delivery and signed-in app workflows, including live record persistence after reload.
 - Live Google search, contact-enrichment coverage, Geocoding and Google photo availability.
 - Real Google OAuth consent, token refresh, Gmail acceptance and mailbox receipt.
 - Send performance under concurrent production traffic.

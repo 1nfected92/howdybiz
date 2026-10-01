@@ -5,10 +5,10 @@ Business discovery and outreach CRM with a static GitHub Pages frontend and a Su
 ## Current delivery status
 
 - Frontend, demo workspace, database migration, authenticated API, Google discovery adapter and Gmail OAuth/send implementation are included.
-- Supabase project creation was refused because the connected account already has its two active free projects. Neither existing project was modified.
+- The dedicated `howdybiz` Supabase project `jmofyaleyhhylmxenqme` is active in Saravia, us-east-1. The owner authorized pausing `football-squares` to free capacity; it is now paused. The Soleful Goddess project was not modified.
 - Source is published at https://github.com/1nfected92/howdybiz. The GitHub Pages deployment passed and https://1nfected92.github.io/howdybiz/ was opened and tested.
 - Google Cloud credentials were not provided. Live Google searches, photos and Gmail sends have not been executed or verified.
-- A full schema was applied to isolated PostgreSQL through PGlite, and the security/function tests passed. This does not substitute for deployment verification on hosted Supabase.
+- The migration and Edge Function are deployed on hosted Supabase. Public frontend configuration, owner restriction, token encryption secret and Auth URLs are configured. Hosted anonymous access, privileged RPC denial and owner/outsider RLS checks passed. Owner email-link sign-in and real provider workflows still require verification.
 
 ## Local review
 
@@ -38,7 +38,7 @@ The public repository and free GitHub Pages project site are deployed:
 - App: https://1nfected92.github.io/howdybiz/
 - Initial successful deployment: https://github.com/1nfected92/howdybiz/actions/runs/36830700979
 
-Open the app and click **Load sample workspace** to review the interface without configuring a backend. Samples are fictional. Live searches and sending remain blocked until backend setup and authorization are complete.
+Open the app and click **Load sample workspace** to review the interface without configuring a backend. Samples are fictional. Live searches and sending remain blocked until Google credentials and owner authorization are complete.
 
 To work locally:
 
@@ -61,7 +61,20 @@ Alternatively, set those public values in `public/config.json`. Never place a se
 
 ## Dedicated Supabase backend
 
-Provision a dedicated `howdybiz` project after resolving the account's free-project limit. Do not pause, delete, or reuse the two existing applications without explicit authorization. The initial quote was $0/month, but project creation failed; recheck plan and limits before provisioning.
+The dedicated backend has been provisioned at **$0/month**:
+
+- Project ref: `jmofyaleyhhylmxenqme`
+- API URL: `https://jmofyaleyhhylmxenqme.supabase.co`
+- Region: `us-east-1`
+- Initial migration: `howdybiz_initial`, applied successfully.
+- Edge Function: `api`, active with explicit request authentication.
+- Auth Site URL and redirect allowlist: `https://1nfected92.github.io/howdybiz/`
+- Server-only values configured: `APP_URL`, `OWNER_EMAIL`, `GMAIL_TOKEN_KEY`.
+- Frontend `public/config.json` contains only the project URL and publishable key.
+
+The owner authorized pausing `football-squares` to make room. Its database was not deleted. Resuming it while both HowdyBiz and The Soleful Goddess are active may require more project capacity. Do not resume, pause or upgrade projects without the owner's direction.
+
+Open HowdyBiz and **Sign in** with the configured owner's Gmail address, then follow the sign-in email. The current provider needs the remaining Google credentials described below. Do not reapply the bootstrap migration to this deployed database.
 
 The CLI-generated migration in `supabase/migrations/` contains the canonical `supabase/schema.sql`. For a fresh project:
 
@@ -83,13 +96,13 @@ Auth setup:
 5. Enable the Data API for `public`. The migration explicitly grants authenticated SELECT access and enables ownership RLS. Anonymous users have no CRM table access, and ordinary authenticated users cannot write or call privileged RPCs.
 6. Sign in through the app. Creating an Auth account alone grants no access to the owner's records.
 
-Hosted functions supply Supabase URL, anon key and service-role key as built-in server environment variables. Configure the additional secrets from a private `.env` file copied from `.env.example`:
+The function reads the built-in `SUPABASE_PUBLISHABLE_KEYS` and `SUPABASE_SECRET_KEYS` dictionaries, with legacy fallback. Secret keys are sent on `apikey`, never as bearer JWTs. Backend secrets are configured in Supabase Edge Functions → Secrets; keep their values out of source and chat. Add the remaining Google secrets individually, or use a private file containing only values you intend to update:
 
 ```bash
 supabase secrets set --env-file .env
 ```
 
-Generate `GMAIL_TOKEN_KEY` once and keep it stable. Rotating it requires reconnecting Gmail:
+`GMAIL_TOKEN_KEY` is already generated and stored. Keep it stable; do not overwrite it when adding Google credentials. For a separate fresh project, generate it once. Rotating it requires reconnecting Gmail:
 
 ```bash
 node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64'))"
@@ -111,12 +124,12 @@ Google photographs are fetched on demand, with Google Maps and author attributio
 
 ## Gmail runtime authorization
 
-The Gmail connector in this conversation cannot export its authorization to the deployed app. Configure a separate web OAuth client in Google Cloud and enable Gmail API.
+The Gmail connector in this conversation cannot export its authorization to the deployed app. Configure a separate web OAuth client in Google Cloud and enable Gmail API. Google Cloud returned “Site Unavailable” in this browser, including one reload; client creation could not be completed here.
 
 1. Configure an OAuth consent screen and add the owner as a test user if the app remains in testing.
-2. Add the exact callback `https://YOUR_PROJECT_REF.supabase.co/functions/v1/api` as an authorized redirect URI.
+2. Add the exact callback `https://jmofyaleyhhylmxenqme.supabase.co/functions/v1/api` as an authorized redirect URI.
 3. Store `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only in Edge Function secrets.
-4. Set `APP_URL` to the final Pages URL, including `/howdybiz/`, and set `OWNER_EMAIL` and the encryption key.
+4. `APP_URL`, `OWNER_EMAIL` and the encryption key are already configured. Keep these values intact.
 5. Sign in to HowdyBiz, open Integrations, click **Connect my Gmail**, and complete Google consent.
 
 Scopes: `openid`, `email`, and `https://www.googleapis.com/auth/gmail.send`. The backend encrypts refresh tokens with AES-GCM, stores them in a private schema, and obtains access tokens server-side. OAuth testing status may affect refresh-token lifetime. Wider distribution may require Google verification. The Gmail connection can be revoked from Integrations.

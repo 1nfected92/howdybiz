@@ -1,14 +1,17 @@
 import {prepareEnvelope,mime,publicUrl,isPublicAddress,extractEmail,websiteAssessment,combineQuery,distanceMiles,cleanText,validEmail,VALID_STAGES} from '../_shared/safety.js';
 const env=name=>Deno.env.get(name)||'';
+function projectKey(dictionary,legacy){const value=env(dictionary);if(value){const keys=JSON.parse(value);if(keys.default)return keys.default;}return env(legacy);}
+const adminHeaders=()=>{const key=projectKey('SUPABASE_SECRET_KEYS','SUPABASE_SERVICE_ROLE_KEY');return {apikey:key,...(key.startsWith('sb_secret_')?{}:{Authorization:'Bearer '+key})};};
+const authHeaders=header=>({apikey:projectKey('SUPABASE_PUBLISHABLE_KEYS','SUPABASE_ANON_KEY'),Authorization:header});
 const origin=()=>new URL(env('APP_URL')).origin;
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':origin(),'Access-Control-Allow-Headers':'authorization, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS','Cache-Control':'no-store','Vary':'Origin'}});
 async function db(path,method='GET',body){
-  const r=await fetch(env('SUPABASE_URL')+'/rest/v1/'+path,{method,headers:{apikey:env('SUPABASE_SERVICE_ROLE_KEY'),Authorization:'Bearer '+env('SUPABASE_SERVICE_ROLE_KEY'),'Content-Type':'application/json',Prefer:'return=representation'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(12000)});
+  const r=await fetch(env('SUPABASE_URL')+'/rest/v1/'+path,{method,headers:{...adminHeaders(),'Content-Type':'application/json',Prefer:'return=representation'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(12000)});
   const data=await r.json().catch(()=>null);if(!r.ok)throw Error(data?.message||'Database request failed.');return data;
 }
 const rpc=(name,args)=>db('rpc/'+name,'POST',args);
 const privateData=(table,method,user,data={})=>rpc('howdy_private',{p_table:table,p_method:method,p_user:user,p_data:data});
-async function auth(req){const header=req.headers.get('Authorization');if(!header?.startsWith('Bearer '))throw Error('Sign in to continue.');const r=await fetch(env('SUPABASE_URL')+'/auth/v1/user',{headers:{apikey:env('SUPABASE_ANON_KEY'),Authorization:header},signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('Invalid or expired session.');const u=await r.json();if(!u.email_confirmed_at||!env('OWNER_EMAIL')||u.email?.toLowerCase()!==env('OWNER_EMAIL').toLowerCase())throw Error('Only the verified workspace owner can access this application.');return u;}
+async function auth(req){const header=req.headers.get('Authorization');if(!header?.startsWith('Bearer '))throw Error('Sign in to continue.');const r=await fetch(env('SUPABASE_URL')+'/auth/v1/user',{headers:authHeaders(header),signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('Invalid or expired session.');const u=await r.json();if(!u.email_confirmed_at||!env('OWNER_EMAIL')||u.email?.toLowerCase()!==env('OWNER_EMAIL').toLowerCase())throw Error('Only the verified workspace owner can access this application.');return u;}
 async function settings(user){let s=(await db('workspace_settings?user_id=eq.'+user))[0];if(!s)s=(await db('workspace_settings','POST',{user_id:user}))[0];return s;}
 function assertRevision(s,revision){if(s.revision!==revision)throw Error('Workspace mode changed. Reload and try again.');}
 async function records(user){const [businesses,activity]=await Promise.all([db('businesses?user_id=eq.'+user+'&or=(expires_at.is.null,expires_at.gt.'+encodeURIComponent(new Date().toISOString())+')&order=created_at.desc'),db('activity?user_id=eq.'+user+'&order=at.desc&limit=1000')]);return businesses.map(b=>({...b.data,id:b.id,place_id:b.place_id,mode:b.mode,activity:activity.filter(a=>a.business_id===b.id).map(({id,at,label,detail})=>({id,at,label,detail}))}));}
@@ -41,7 +44,7 @@ async function callback(url){
   const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:env('GOOGLE_CLIENT_ID'),client_secret:env('GOOGLE_CLIENT_SECRET'),code,grant_type:'authorization_code',redirect_uri:env('SUPABASE_URL')+'/functions/v1/api'}),signal:AbortSignal.timeout(15000)});
   const tokens=await r.json();if(!r.ok||!tokens.refresh_token)throw Error('Google did not return offline authorization. Reconnect with consent.');
   const profile=await googleIdentity(tokens.access_token);if(profile.email.toLowerCase()!==env('OWNER_EMAIL').toLowerCase())throw Error('Connect the workspace owner Gmail account.');
-  const ur=await fetch(env('SUPABASE_URL')+'/auth/v1/admin/users/'+saved.user_id,{headers:{apikey:env('SUPABASE_SERVICE_ROLE_KEY'),Authorization:'Bearer '+env('SUPABASE_SERVICE_ROLE_KEY')}});const user=await ur.json();if(!ur.ok||user.email?.toLowerCase()!==profile.email.toLowerCase())throw Error('Google and workspace accounts must match.');
+  const ur=await fetch(env('SUPABASE_URL')+'/auth/v1/admin/users/'+saved.user_id,{headers:adminHeaders()});const user=await ur.json();if(!ur.ok||user.email?.toLowerCase()!==profile.email.toLowerCase())throw Error('Google and workspace accounts must match.');
   if(!tokens.scope?.split(' ').includes('https://www.googleapis.com/auth/gmail.send'))throw Error('Gmail send authorization was not granted.');
   await privateData('gmail','put',saved.user_id,{email:profile.email,refresh_token:await encryptedToken(tokens.refresh_token)});
   return Response.redirect(env('APP_URL')+'?gmail=connected',303);
@@ -111,6 +114,7 @@ Deno.serve(async req=>{
     if(!env('APP_URL'))return new Response('APP_URL is not configured.',{status:503});
     if(req.method==='OPTIONS')return json({});
     const url=new URL(req.url);
+    if(req.method==='GET'&&url.searchParams.get('health')==='1')return json({status:'ok',authentication:'required',owner_configured:Boolean(env('OWNER_EMAIL')),places_configured:Boolean(env('GOOGLE_PLACES_KEY')),gmail_oauth_configured:Boolean(env('GOOGLE_CLIENT_ID')&&env('GOOGLE_CLIENT_SECRET')&&env('GMAIL_TOKEN_KEY'))});
     if(req.method==='GET'){try{return await callback(url);}catch{return Response.redirect(env('APP_URL')+'?gmail=failed',303);}}
     if(req.method!=='POST')return json({error:'Method not allowed'},405);
     const requester=req.headers.get('Origin');if(requester&&requester!==origin())return json({error:'Origin not allowed'},403);
