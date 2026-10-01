@@ -6,11 +6,12 @@ export async function initialize() {
   const stored = JSON.parse(localStore.getItem('howdybiz.connection') || '{}');
   const r = await fetch('./config.json').catch(() => null);
   configuration = { ...(r?.ok ? await r.json() : {}), ...stored };
-  session = JSON.parse(sessionStore.getItem('howdybiz.auth') || 'null');
+  session = JSON.parse(localStore.getItem('howdybiz.auth') || sessionStore.getItem('howdybiz.auth') || 'null');
+  if(session){localStore.setItem('howdybiz.auth',JSON.stringify(session));sessionStore.removeItem('howdybiz.auth');}
   const hash = new URLSearchParams(location.hash.slice(1));
   if (hash.get('access_token')) {
     session = { access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Date.now()+Number(hash.get('expires_in')||3600)*1000 };
-    sessionStore.setItem('howdybiz.auth', JSON.stringify(session));
+    localStore.setItem('howdybiz.auth', JSON.stringify(session));
     history.replaceState(null,'',location.pathname+location.search);
   }
   return configuration;
@@ -27,10 +28,10 @@ export async function authenticate(email) {
   if(!configured())throw Error('Configure Supabase first.');
   await request('/auth/v1/otp?redirect_to='+encodeURIComponent(location.origin+location.pathname),{method:'POST',body:{email,create_user:true}},false);
 }
-export async function logout(){ if(session)await request('/auth/v1/logout',{method:'POST'}).catch(()=>{});session=null;sessionStore.removeItem('howdybiz.auth'); }
+export async function logout(){ if(session)await request('/auth/v1/logout',{method:'POST'}).catch(()=>{});session=null;localStore.removeItem('howdybiz.auth');sessionStore.removeItem('howdybiz.auth'); }
 async function refresh(){
   if(!session?.refresh_token)throw Error('Sign in to continue.');
-  if(!refreshFlight)refreshFlight=request('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token}},false).then(s=>{session={...s,expires_at:Date.now()+s.expires_in*1000};sessionStore.setItem('howdybiz.auth',JSON.stringify(session));}).finally(()=>refreshFlight=null);
+  if(!refreshFlight)refreshFlight=request('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token}},false).then(s=>{session={...s,expires_at:Date.now()+s.expires_in*1000};localStore.setItem('howdybiz.auth',JSON.stringify(session));}).finally(()=>refreshFlight=null);
   return refreshFlight;
 }
 async function request(path,options={},authorized=true){

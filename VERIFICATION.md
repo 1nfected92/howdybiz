@@ -4,7 +4,7 @@
 
 ## Connector integration verification
 
-- **32 automated tests passed**, including eight new PostgreSQL queue/transport tests. Build succeeded.
+- **34 automated tests passed**, including eight new PostgreSQL queue/transport tests and two browser-session persistence tests. Build succeeded.
 - Additive connector migration applied, API version 6 deployed, and enabled hourly automation created successfully.
 - Connected Gmail profile email matched the confirmed Supabase owner; one owner sign-in session exists. No tokens or sign-in codes were read.
 - Real demo discovery request progressed queued → running → completed. One complete-contact business was verified from its own contact page and stored in the isolated demo workspace. A blocked candidate was omitted. No exhaustive coverage, Google ratings, photos or radius coverage was claimed.
@@ -13,6 +13,8 @@
 - Mode switches cancel waiting jobs and previews. Running or unknown mail outcomes block switches. Demo clearing cancels searches and prevents late completion from repopulating the workspace.
 - Search refresh preserves notes, pipeline stage, quotes and payment history. Background updates defer table replacement while a field or modal is active; no full-screen polling renders occur.
 - Security advisor now reports seven intentional private-table RLS-without-policy INFO notices and one password-protection WARN. The application uses email-link authentication; compromised-password screening remains disabled in Supabase. Reference: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- Connector Pages deployment passed in 48 seconds: https://github.com/1nfected92/howdybiz/actions/runs/36938022370. The published dashboard opened with the new Requests view, hourly public-search label and optional Google-details button disabled. No application JavaScript error was observed.
+- Hosted connector checks also passed: explicit submission produced a queued ticket, injected BCC was rejected before transport, and all verification fixtures were rolled back. Anonymous worker RPC returned HTTP 401; unauthenticated workspace access remained blocked.
 - **Not yet observed:** a real Gmail Send acceptance, mailbox receipt, or future execution of the hourly automation. Do not describe the unsent draft as a send test.
 
 ## Earlier source/UI checks

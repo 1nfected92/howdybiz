@@ -7,9 +7,9 @@ Business discovery and outreach CRM with a static GitHub Pages frontend and a Su
 - Frontend and dedicated Supabase backend are deployed; production records are private and owner-scoped.
 - **Default integration: connected ChatGPT worker.** No Google Cloud API keys or Gmail OAuth client setup are required for this route.
 - Business searches and explicitly reviewed Send requests enter a secure queue in Supabase. An enabled ChatGPT automation checks **hourly**, using the owner's existing Gmail/Supabase connections and public web search. Requests can also be processed immediately by asking this conversation: **Process my pending HowdyBiz requests now.**
-- The owner's Supabase email confirmation and sign-in session were verified. Sign in in the dashboard with the configured owner email and follow the secure link when needed.
+- The owner's Supabase email confirmation and sign-in session were verified. Sign in in the dashboard with the configured owner email and follow the secure link when needed. Sign-in now persists across browser tabs until sign-out.
 - A real public-web verification search completed and stored one sourced demo lead. A real unsent Gmail draft was created; no outreach or test email was sent.
-- **32 automated tests passed.** Provider sending acceptance and a future scheduled execution have not yet been observed.
+- **34 automated tests passed.** Provider sending acceptance and a future scheduled execution have not yet been observed.
 - `football-squares` remains paused. No paid upgrade was performed.
 
 ## Easiest workflow
